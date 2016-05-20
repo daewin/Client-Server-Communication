@@ -16,7 +16,7 @@
 String codemaker_generate_code(String colours);
 String codebreaker(String colours);
 String char_to_string(char character);
-String codemaker_provide_feedback(String secret_code, String input_code);
+void codemaker_provide_feedback(String secret_code, String input_code);
 
 
 int
@@ -24,8 +24,8 @@ main(int argc, char* argv[]){
     String colours = "ABCDEF";
     int attempt = 0;
     
-    //String secret_code = codemaker_generate_code(colours);
-    String secret_code = "ABCC";
+    String secret_code = codemaker_generate_code(colours);
+    //String secret_code = "ABCC";
     printf("Final Secret Message: %s\n", secret_code);
     
     while(attempt < MAXGUESSES){
@@ -58,13 +58,15 @@ codemaker_generate_code(String colours){
     
     // Randomly generate and concatenate the code chars to secret_code
     for(i = 0; i < SECRETCODELENGTH; i++){
+        // Memory Leak Info: char_to_string has been concatenated and freed
+        // along with secret_code.
         strcat(secret_code, char_to_string(colours[rand() % strlen(colours)]));
     }
        
     return secret_code;
 }
 
-String
+void
 codemaker_provide_feedback(String secret_code, String input_code){
     // We use linked lists to keep track of the specific colour and locations
     // ("indexes") that have been guessed right. This is so we don't have 
@@ -79,16 +81,19 @@ codemaker_provide_feedback(String secret_code, String input_code){
     int i, j;
     
     for(i = 0; i < strlen(secret_code); i++){
+        // Memory Leak Info: char_to_string's return value is freed after use
+        // by the empty_list function.
         list_insert(secret_code_list, char_to_string(secret_code[i]));
     }
     
     for(j = 0; j < strlen(input_code); j++){
+        // Memory Leak Info: Same as above.
         list_insert(input_code_list, char_to_string(input_code[j]));
     }
     
-    struct node *secret_node = secret_code_list->head;
-    struct node *input_node = input_code_list->head;
     
+    struct node *secret_node = secret_code_list->head;
+    struct node *input_node = input_code_list->head;    
     
     /* First we check for b (correct colours at correct positions). */
     // Just check at that index.
@@ -114,19 +119,13 @@ codemaker_provide_feedback(String secret_code, String input_code){
     }
     
     
-    // Use two while loops to traverse through the lists
-    // Just like a double for loop!
-            
-    printf("Secret: ");
-    print_list(secret_code_list);
-    
-    printf("Input: ");
-    print_list(input_code_list);
-    
     // Reuse node from above.
     secret_node = secret_code_list->head;
-        
+    
+    // Use two while loops to traverse through the lists
+    // Just like a double for loop!    
     while(secret_node){
+        
         // Make sure we don't check the ones that have already been guessed
         if(!secret_node->guessed)
         {            
@@ -157,14 +156,8 @@ codemaker_provide_feedback(String secret_code, String input_code){
                       
         secret_node = secret_node->next;
     }
-    
-    printf("Secret2: ");
-    print_list(secret_code_list);
-    
-    printf("Input2: ");
-    print_list(input_code_list);
 
-    printf("B: %d, M: %d\n", b, m);
+    printf("[%d:%d]\n", b, m);
     
     
     
@@ -179,8 +172,12 @@ codemaker_provide_feedback(String secret_code, String input_code){
     input_code_list = NULL;
     free(input_code_list);
     
+    // Free secret and input codes
+    secret_code = NULL;
+    input_code = NULL;
     
-    return secret_code;
+    free(secret_code);
+    free(input_code);
 }
 
 
@@ -208,14 +205,20 @@ codebreaker(String colours){
             // Check that the "codes" are allowed colours
             
             for(i = 0; i < SECRETCODELENGTH; i++){
-                if(strstr(colours, char_to_string(input_code[i])) == NULL){
+                String valid_colour = char_to_string(input_code[i]);
+                if(strstr(colours, valid_colour) == NULL){
                     fprintf(stderr, "Error: Only colours from \"");
                     fprintf(stderr, colours);
                     fprintf(stderr,"\" are allowed!\n");  
                     
                     input_correct = 0;
+                    
+                    // Free char_to_string's return value if non-valid colour.
+                    free(valid_colour);
                     break;
-                } 
+                }
+                // Free char_to_string's return value if valid colour.
+                free(valid_colour); 
             } 
         }
     }  
@@ -232,6 +235,8 @@ char_to_string(char character){
 
 
     int secret_code_length = strlen(secret_code_character) + 1;
+    
+    // Memory Leak Info: This malloc has been freed after being used.
     String secret_code_string = malloc(secret_code_length * sizeof(char));
     
     strcpy(secret_code_string, secret_code_character);
