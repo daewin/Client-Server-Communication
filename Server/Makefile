@@ -22,7 +22,7 @@ EXE = 		server
 
 ## Top level target is executable.
 $(EXE):	$(OBJ)
-		$(CC) $(CFLAGS) -o $(EXE) $(OBJ) -lm
+		$(CC) $(CFLAGS) -o $(EXE) $(OBJ) -lm -pthread
 
 
 ## Clean: Remove object files and core dump files.

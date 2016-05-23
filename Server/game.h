@@ -10,6 +10,7 @@
 
 #define MAXGUESSES 10
 #define SECRETCODELENGTH 4
+#define FEEDBACKLENGTH 10
 
 static const String colours = "ABCDEF";
 
@@ -17,5 +18,5 @@ static const String colours = "ABCDEF";
 String codemaker_generate_code();
 String codebreaker();
 String char_to_string(char character);
-void codemaker_provide_feedback(String secret_code, String input_code);
+String codemaker_provide_feedback(String secret_code, String input_code);
 int is_code_invalid(String secret_code, int is_server);

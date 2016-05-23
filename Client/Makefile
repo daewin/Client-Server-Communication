@@ -16,9 +16,9 @@ CFLAGS 	= -Wall
 ## SRC = Source files.
 ## EXE = Executable name.
 
-SRC =		game.c linked_list.c
-OBJ =		game.o linked_list.o
-EXE = 		game
+SRC =		client.c
+OBJ =		client.o
+EXE = 		client
 
 ## Top level target is executable.
 $(EXE):	$(OBJ)
@@ -39,4 +39,4 @@ clobber: clean
 ##driver.o:	prime.h
 ##prime.o:	prime.h
 
-linked_list.o: linked_list.h
+client.o: client.h

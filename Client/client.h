@@ -1,25 +1,21 @@
 /********************************************************
- * Server-Side using TCP for Project 2
+ * Client-Side using TCP for Project 2
  * Subject: COMP30023 Computer Systems
  * Author: Daewin SV Lingam
  * Student ID: 679182
  * Date Modified: 22/5/2016
  ********************************************************/
-  
-#include "game.h"
 
+#define SECRETCODELENGTH 4
 #define BUFFERSIZE 1024
-#define MAXCLIENTS 20
 
-String itoa(int num);
-void *worker_function(void* args);
-int acknowledge_sent(int threadsocketfd);
-int acknowledge_received(int threadsocketfd);
+typedef char* String;
 
-struct workerArgs{
-    int socket;
-    String secret_code;
-};
-
+static const String SUCCESS = "SUCCESS";
+static const String FAILURE = "FAILURE";
+static const String INVALID = "INVALID";
 static const String RECEIVED = "RECEIVED";
 
+
+int acknowledge_sent(int socketfd);
+int acknowledge_received(int socketfd);

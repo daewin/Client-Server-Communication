@@ -41,13 +41,14 @@ codemaker_generate_code(){
 }
 
 
-void
+String
 codemaker_provide_feedback(String secret_code, String input_code){
     // We use linked lists to keep track of the specific colour and locations
     // ("indexes") that have been guessed right. This is so we don't have 
     // overlapping and/or double checks.
     
     int b = 0, m = 0;
+    String returnval;
     
     struct list *secret_code_list = create_list();
     struct list *input_code_list = create_list();
@@ -131,10 +132,10 @@ codemaker_provide_feedback(String secret_code, String input_code){
                       
         secret_node = secret_node->next;
     }
-
-    printf("[%d:%d]\n", b, m);
     
     
+    returnval = malloc(FEEDBACKLENGTH * sizeof(char));
+    sprintf(returnval, "[%d:%d]", b, m);
     
     
     // Empty and free secret_code_list
@@ -146,13 +147,8 @@ codemaker_provide_feedback(String secret_code, String input_code){
     empty_list(input_code_list);
     input_code_list = NULL;
     free(input_code_list);
-    
-    // Free secret and input codes
-    secret_code = NULL;
-    input_code = NULL;
-    
-    free(secret_code);
-    free(input_code);
+        
+    return returnval;
 }
 
 
