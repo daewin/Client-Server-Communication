@@ -1,56 +1,30 @@
-/* Mastermind Game Test
- * Daewin SV Lingam (679182)
-*/
+/********************************************************
+ * Game for Project 2
+ * Subject: COMP30023 Computer Systems
+ * Author: Daewin SV Lingam
+ * Student ID: 679182
+ * Date Modified: 21/5/2016
+ ********************************************************/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "linked_list.h"
+#include <assert.h>
 
-#define MAXGUESSES 10
-#define SECRETCODELENGTH 4
-
-
-// Declarations
-String codemaker_generate_code(String colours);
-String codebreaker(String colours);
-String char_to_string(char character);
-void codemaker_provide_feedback(String secret_code, String input_code);
-
-
-int
-main(int argc, char* argv[]){
-    String colours = "ABCDEF";
-    int attempt = 0;
-    
-    String secret_code = codemaker_generate_code(colours);
-    //String secret_code = "ABCC";
-    printf("Final Secret Message: %s\n", secret_code);
-    
-    while(attempt < MAXGUESSES){
-        String combination = codebreaker(colours);
-        
-        if(strcmp(combination, secret_code) == 0){
-            printf("Correct!");
-            break;
-        } else {
-            codemaker_provide_feedback(secret_code, combination);
-        }        
-        
-        attempt++;
-    }
-    
-    return 0;
-}
-
+#include "game.h"
 
 String
-codemaker_generate_code(String colours){
+codemaker_generate_code(){
     int i;
     
-    // Malloc and intialize the secret code to "empty"
+    // Malloc and intialize the secret code to "empty". This allows us
+    // to return and use the secret code.    
     String secret_code = malloc((SECRETCODELENGTH+1) * sizeof(char));
+    
+    // Assert that malloc succeeded
+    assert(secret_code);
+    
     strcpy(secret_code, "");
     
     // Seed the randomizer with the current time
@@ -65,6 +39,7 @@ codemaker_generate_code(String colours){
        
     return secret_code;
 }
+
 
 void
 codemaker_provide_feedback(String secret_code, String input_code){
@@ -181,56 +156,15 @@ codemaker_provide_feedback(String secret_code, String input_code){
 }
 
 
-String
-codebreaker(String colours){    
-    int i, input_correct = 0;
-    String input_code = malloc((SECRETCODELENGTH+1) * sizeof(char));
-    
-    // Scan for entered combination
-    while(!input_correct){
-        printf("Enter your combination: ");
-        scanf("%s", input_code);
-        
-        // Set flag to correct and we prove otherwise after
-        input_correct = 1;
-                
-        /* 
-           Error checking 
-        */
-        if(strlen(input_code) != 4){
-            fprintf(stderr, "Error: Four colours are required!\n");
-            
-            input_correct = 0;
-        } else {            
-            // Check that the "codes" are allowed colours
-            
-            for(i = 0; i < SECRETCODELENGTH; i++){
-                String valid_colour = char_to_string(input_code[i]);
-                if(strstr(colours, valid_colour) == NULL){
-                    fprintf(stderr, "Error: Only colours from \"");
-                    fprintf(stderr, colours);
-                    fprintf(stderr,"\" are allowed!\n");  
-                    
-                    input_correct = 0;
-                    
-                    // Free char_to_string's return value if non-valid colour.
-                    free(valid_colour);
-                    break;
-                }
-                // Free char_to_string's return value if valid colour.
-                free(valid_colour); 
-            } 
-        }
-    }  
-    
-    return input_code;
-}
+
 
 String
 char_to_string(char character){
     // To simplify and avoid pesky EOL flag manipulations, and also to use
     // our String typedef, we use an "empty" string array.
     char secret_code_character[] = "0";
+    
+    // Replace the dummy value with our character
     secret_code_character[0] = character;
 
 
@@ -239,7 +173,53 @@ char_to_string(char character){
     // Memory Leak Info: This malloc has been freed after being used.
     String secret_code_string = malloc(secret_code_length * sizeof(char));
     
+    // Assert that malloc succeeded
+    assert(secret_code_string);
+    
     strcpy(secret_code_string, secret_code_character);
 
     return secret_code_string;
+}
+
+
+/* Check for any errors in the secret code.
+ * Returns the error flag as described below.
+ *      0 : No Error
+ *      1 : Number of code invalid
+ *      2 : Colour of code invalid
+ */
+int
+is_code_invalid(String secret_code, int is_server){
+    int i;
+    
+    if(strlen(secret_code) != SECRETCODELENGTH){
+        if(is_server){
+            fprintf(stderr, "Error: Four colours are required!\n");
+        }
+        
+        return 1;
+    } else {            
+        // Check that the "codes" are allowed colours
+        
+        for(i = 0; i < SECRETCODELENGTH; i++)
+        {
+            String valid_colour = char_to_string(secret_code[i]);
+            if(strstr(colours, valid_colour) == NULL){
+                if(is_server){
+                    fprintf(stderr, "Error: Only colours from \"");
+                    fprintf(stderr, colours);
+                    fprintf(stderr,"\" are allowed!\n");  
+                }
+                
+                // Free char_to_string's return value if non-valid colour.
+                free(valid_colour);
+                return 2;
+            }
+            // Free char_to_string's return value if valid colour.
+            free(valid_colour); 
+        } 
+    }
+    
+    // Code is valid
+    return 0;
 }
