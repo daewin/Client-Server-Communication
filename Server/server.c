@@ -136,7 +136,8 @@ main(int argc, char* argv[]){
         wa->secret_code = secret_code;
         
         
-        if(pthread_create(&worker_thread, NULL, worker_function, (void*)wa) != 0)
+        if(pthread_create(&worker_thread, NULL, 
+                        worker_function, (void*)wa) != 0)
         {
             perror("Error in creating a worker thread");
             free(wa);
@@ -160,7 +161,7 @@ main(int argc, char* argv[]){
 // This will handle the game for each client as a thread.
 void *worker_function(void* args)
 {
-    int threadsocketfd, attempt = 0, i;
+    int threadsocketfd, attempt = 0;
     struct workerArgs *wa;
     char server_message[BUFFERSIZE+1];
     String client_secret_code, secret_code;
@@ -197,8 +198,7 @@ void *worker_function(void* args)
     }
     
     // Check if client has acknowledged message
-    while(!acknowledge_sent(threadsocketfd));
-    
+    while(!acknowledge_sent(threadsocketfd));   
 
     
     // Send request to client to submit a guess of the secret code.
@@ -251,9 +251,9 @@ void *worker_function(void* args)
     while(1)
     {
         ////////////////////////////////////// Block 1 //////////////////////////////////////
-        // 1.)  Server -> Client : Too many attempts? (yes/no)
+        // Check and send message if too many attempts have been made.
         if(attempt >= MAXGUESSES){
-            // 1a.) Yes, both break out of loop and client closes connection.
+            // Yes, both break out of loop and client closes connection.
             memset(server_message, '\0', BUFFERSIZE+1);  
               
             strcpy(server_message, 
@@ -262,93 +262,114 @@ void *worker_function(void* args)
             strcat(server_message, "\n");
             
 
-            if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0)
+            if(send(threadsocketfd, server_message, 
+                            strlen(server_message), 0) < 0)
             {
                 perror("Error writing to the socket");
                 exit(EXIT_FAILURE);
             }
             
+            // Check if client has acknowledged message
+            while(!acknowledge_sent(threadsocketfd));         
+                    
             break;
             
         } else {
-            // 1b.) No, send the number of attempts so far.
+            // No, send the number of attempts so far.
             memset(server_message, '\0', BUFFERSIZE+1);    
-            sprintf(server_message, "Attempt %d/%d: ", attempt, MAXGUESSES);
+            sprintf(server_message, "Attempt %d/%d: ", attempt+1, MAXGUESSES);
             
 
-            if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0)
+            if(send(threadsocketfd, server_message, 
+                            strlen(server_message), 0) < 0)
             {
                 perror("Error writing to the socket");
                 exit(EXIT_FAILURE);
             }
             
+            // Check if client has acknowledged message
+            while(!acknowledge_sent(threadsocketfd));       
         }
-        
-        // Check if client has acknowledged message
-        while(!acknowledge_sent(threadsocketfd));
-        
-        
-        ////////////////////////////////////////////////////////////////////////////////////   
+        /////////////////////////////////////////////////////////////////////////////////////        
            
-        // 2.) Client -> Server : Client sends code.
-        memset(server_message, '\0', BUFFERSIZE+1);        
-        if(recv(threadsocketfd, server_message, BUFFERSIZE+1, 0) < 0){
-            perror("Error reading from the socket");
-            exit(EXIT_FAILURE);
-        }
-        
-        // Make client_secret_code an empty string
-        strcpy(client_secret_code, "");
-        
-        // Add only the code to client_secret_code
-        for(i = 0; i < SECRETCODELENGTH; i++)
-        {
-            // Memory Leak Info: char_to_string has been concatenated and freed
-            // along with client_secret_code.
-            strcat(client_secret_code, char_to_string(server_message[i]));
-        }                
-        
-        // 3.)  Server -> Client : Is code valid? (yes/no)
-        // We keep looping through until the code entered is valid.
+        ////////////////////////////////////// Block 2 //////////////////////////////////////   
+        // Client sends code 
+        // We keep looping through until the code client entered is valid.
         while(1)
         {
-            int validity = is_code_invalid(client_secret_code, 0);
+            // Read guess from client
+            memset(server_message, '\0', BUFFERSIZE+1);        
+            if(recv(threadsocketfd, server_message, BUFFERSIZE+1, 0) < 0){
+                perror("Error reading from the socket");
+                exit(EXIT_FAILURE);
+            }
+            
+            // Acknowledge message has been received
+            acknowledge_received(threadsocketfd);  
+            
+            ///////////////////////////////////// Block 2a //////////////////////////////////////                      
+            // Check if the code is valid.
+            int validity = is_code_invalid(server_message, 0);
             if(validity == 1){
+                // Code is invalid: Not four colours
                 memset(server_message, '\0', BUFFERSIZE+1);    
-                strcpy(server_message, "INVALID: Four colours are required!\n");
+                strcpy(server_message, 
+                        "INVALID: Four colours are required!\n");
                 
-                if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0)
+                if(send(threadsocketfd, server_message, 
+                                strlen(server_message), 0) < 0)
                 {
                     perror("Error writing to the socket");
                     exit(EXIT_FAILURE);
                 }
                 
             } else if (validity == 2){
+                // Code is invalid: Not allowed colours
                 memset(server_message, '\0', BUFFERSIZE+1);    
                 strcpy(server_message, "INVALID: Only colours from \"");
                 strcat(server_message, colours);
                 strcat(server_message, "\" are allowed!\n");
                 
-                if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0)
+                if(send(threadsocketfd, server_message, 
+                                strlen(server_message), 0) < 0)
                 {
                     perror("Error writing to the socket");
                     exit(EXIT_FAILURE);
                 }
                 
             } else {
+                // Code is valid
+                // Assign it to the malloc-ed client_secret_code.
+                strcpy(client_secret_code, server_message);
+                                
                 memset(server_message, '\0', BUFFERSIZE+1);    
-                strcpy(server_message, "");
                 
-                if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0)
+                // We just use a dummy empty string. I'm sure there is a more
+                // elegant approach to this.
+                strcpy(server_message, "DUMMY");
+                
+                if(send(threadsocketfd, server_message, 
+                                strlen(server_message), 0) < 0)
                 {
                     perror("Error writing to the socket");
                     exit(EXIT_FAILURE);
                 }
+                        
+                // Check if client has acknowledged message
+                while(!acknowledge_sent(threadsocketfd));
+                
+                // Code is valid so we break out of loop.
                 break;   
             }
+            
+            // Check if client has acknowledged message (for the first two ifs)
+            while(!acknowledge_sent(threadsocketfd));
+            
         }
-
+        /////////////////////////////////////////////////////////////////////////////////////
         
+        ////////////////////////////////////// Block 3 //////////////////////////////////////
+        // Send result of the clients code.
         if(strcmp(client_secret_code, secret_code) == 0)
         {
             memset(server_message, '\0', BUFFERSIZE+1);    
@@ -359,12 +380,17 @@ void *worker_function(void* args)
                 perror("Error writing to the socket");
                 exit(EXIT_FAILURE);
             }
+
+            // Check if client has acknowledged message
+            while(!acknowledge_sent(threadsocketfd));
+            
             break;
             
         } else {            
             memset(server_message, '\0', BUFFERSIZE+1);    
             strcpy(server_message, 
                 codemaker_provide_feedback(secret_code, client_secret_code));
+            strcat(server_message, "\n");
             
             if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0)
             {
@@ -372,8 +398,11 @@ void *worker_function(void* args)
                 exit(EXIT_FAILURE);
             }
             
+            // Check if client has acknowledged message
+            while(!acknowledge_sent(threadsocketfd));        
             
-        }        
+        }
+        /////////////////////////////////////////////////////////////////////////////////////        
         
         attempt++;
     }

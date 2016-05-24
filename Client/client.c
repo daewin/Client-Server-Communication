@@ -23,6 +23,7 @@ main(int argc, char* argv[]){
     // Representing our client
     char client_message[BUFFERSIZE+1];
     int socketfd;     
+    char attempt_message[ATTEMPTSIZE+1];
     
     // Representing our server
     String input_hostname;
@@ -91,6 +92,7 @@ main(int argc, char* argv[]){
     }
     printf("%s", client_message);
     
+    // Acknowledge message has been received
     acknowledge_received(socketfd);
     
     
@@ -106,6 +108,7 @@ main(int argc, char* argv[]){
     }    
     printf("%s", client_message);
     
+    // Acknowledge message has been received
     acknowledge_received(socketfd);
     
 
@@ -131,7 +134,7 @@ main(int argc, char* argv[]){
     while(1)
     {        
         ////////////////////////////////////// Block 1 //////////////////////////////////////
-        // Read if there are too many attempts
+        // Read if there are too many attempts.
         memset(client_message, '\0', BUFFERSIZE+1);
 
         if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
@@ -139,27 +142,34 @@ main(int argc, char* argv[]){
             perror("Error reading from the socket");
             close(socketfd);
             exit(EXIT_FAILURE);
-        }
+        }     
         
-        acknowledge_received(socketfd);
-        
-        ////////////////////////////////////////////////////////////////////////////////////    
+        // Acknowledge message has been received
+        acknowledge_received(socketfd);            
         
         if(strstr(client_message, FAILURE) != NULL){
-            // If FAILURE receipt found, print message, and end connection.
-            printf(client_message);
+            // If "FAILURE" receipt found, print message, and end connection.
+            printf(client_message);            
             break;
+            
         } else {
-            // Print attempt message
+            // Print "FAILURE" receipt not found, print attempt message.
             printf(client_message);
+            
+            // Store attempt
+            memset(attempt_message, '\0', ATTEMPTSIZE+1);
+            strcpy(attempt_message, client_message);
         }
-
+        /////////////////////////////////////////////////////////////////////////////////////
         
+        ////////////////////////////////////// Block 2 //////////////////////////////////////
+        // Client sends code 
+        // We keep looping through until the code entered is valid.
         while(1)
         {
-            // Write your guess to the server
+            // Write code to the server
             memset(client_message, '\0', BUFFERSIZE+1);
-            fgets(client_message, BUFFERSIZE+1, stdin);
+            scanf("%s", client_message);            
             
             if(send(socketfd, client_message, strlen(client_message), 0) < 0)
             {
@@ -168,7 +178,11 @@ main(int argc, char* argv[]){
                 exit(EXIT_FAILURE);
             }
             
-            // Read result of guess
+            // Check if server has acknowledged message
+            while(!acknowledge_sent(socketfd));
+            
+            ////////////////////////////////////// Block 2a //////////////////////////////////////
+            // Read if code is valid
             memset(client_message, '\0', BUFFERSIZE+1);
         
             if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
@@ -176,21 +190,24 @@ main(int argc, char* argv[]){
                 perror("Error reading from the socket");
                 close(socketfd);
                 exit(EXIT_FAILURE);
-            }              
-            
-            
-            if(strstr(client_message, INVALID) != NULL){
-                // If INVALID receipt found, print message and retry
-                printf(client_message);
-            } else {
-                // No receipt found
-                break;
             }
             
+            // Acknowledge message has been received
+            acknowledge_received(socketfd);     
+            
+            if(strstr(client_message, INVALID) != NULL){
+                // If "INVALID" receipt found, print message and retry
+                printf(client_message);
+                printf(attempt_message);
+            } else {
+                // No "INVALID" receipt found, so code was valid. Break.
+                break;
+            }            
         }
+        /////////////////////////////////////////////////////////////////////////////////////
         
-        
-        // Read result
+        ////////////////////////////////////// Block 3 //////////////////////////////////////
+        // Read result of our code.
         memset(client_message, '\0', BUFFERSIZE+1);
     
         if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
@@ -199,19 +216,22 @@ main(int argc, char* argv[]){
             close(socketfd);
             exit(EXIT_FAILURE);
         }
+
+        // Acknowledge message has been received
+        acknowledge_received(socketfd);    
         
             
         if(strstr(client_message, SUCCESS) != NULL){
-            // If SUCCESS receipt found, print message and break
+            // If "SUCCESS" receipt found, print message and break
             printf(client_message);
+            
             break;
+            
         } else {
-            // No receipt found
+            // No "SUCCESS" receipt found, so we print feedback
             printf(client_message);
         }  
     }
-    
-    
     // Close the socket after we're done
     close(socketfd);
     

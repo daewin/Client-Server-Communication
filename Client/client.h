@@ -8,6 +8,7 @@
 
 #define SECRETCODELENGTH 4
 #define BUFFERSIZE 1024
+#define ATTEMPTSIZE 64
 
 typedef char* String;
 

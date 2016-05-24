@@ -135,7 +135,7 @@ codemaker_provide_feedback(String secret_code, String input_code){
     
     
     returnval = malloc(FEEDBACKLENGTH * sizeof(char));
-    sprintf(returnval, "[%d:%d]", b, m);
+    sprintf(returnval, "Result: [%d:%d]", b, m);
     
     
     // Empty and free secret_code_list
