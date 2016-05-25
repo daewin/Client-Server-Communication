@@ -32,9 +32,13 @@ codemaker_generate_code(){
     
     // Randomly generate and concatenate the code chars to secret_code
     for(i = 0; i < SECRETCODELENGTH; i++){
-        // Memory Leak Info: char_to_string has been concatenated and freed
-        // along with secret_code.
-        strcat(secret_code, char_to_string(colours[rand() % strlen(colours)]));
+        // Memory Leak Info: secret_code is freed after use in each Server  
+        // thread. As each thread has its own unique random secret_code 
+        // (if no args given), freeing does not cause any issues.
+        String secret_code_character = 
+                    char_to_string(colours[rand() % strlen(colours)]);
+        strcat(secret_code, secret_code_character);
+        free(secret_code_character);
     }
        
     return secret_code;
@@ -50,21 +54,27 @@ codemaker_provide_feedback(String secret_code, String input_code){
     int b = 0, m = 0;
     String returnval;
     
+    // Memory Leak Info: secret_code_list is freed after use.
     struct list *secret_code_list = create_list();
+    
+    // Memory Leak Info: Same as above.
     struct list *input_code_list = create_list();
+    
     
     // Insert individual colours into list
     int i, j;
     
-    for(i = 0; i < strlen(secret_code); i++){
-        // Memory Leak Info: char_to_string's return value is freed after use
-        // by the empty_list function.
-        list_insert(secret_code_list, char_to_string(secret_code[i]));
+    for(i = 0; i < strlen(secret_code); i++){        
+        // Memory Leak Info: secret_code_character is freed after use
+        // by using list_remove.
+        String secret_code_character = char_to_string(secret_code[i]);
+        list_insert(secret_code_list, secret_code_character);
     }
     
     for(j = 0; j < strlen(input_code); j++){
         // Memory Leak Info: Same as above.
-        list_insert(input_code_list, char_to_string(input_code[j]));
+        String input_code_character = char_to_string(input_code[j]);
+        list_insert(input_code_list, input_code_character);
     }
     
     

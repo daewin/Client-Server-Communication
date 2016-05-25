@@ -3,9 +3,10 @@
  * Subject: COMP30023 Computer Systems
  * Author: Daewin SV Lingam
  * Student ID: 679182
- * Date Modified: 22/5/2016
- 
- *https://github.com/uchicago-cs/cmsc23300/blob/master/samples/sockets/server-pthreads.c
+ * Date Modified: 25/5/2016
+ *
+ * The following helped immensely in my Server-(Multi)Client implementation:
+ * https://github.com/uchicago-cs/cmsc23300/blob/master/samples/sockets/server-pthreads.c
  ********************************************************/
  
 #include <stdio.h>
@@ -21,6 +22,12 @@
 #include <pthread.h>
 
 #include "server.h"
+
+
+// Globally accessible variables and a mutex
+
+pthread_mutex_t mutex;
+
 
 int
 main(int argc, char* argv[]){
@@ -132,6 +139,11 @@ main(int argc, char* argv[]){
         // the parameters to the thread. So that's what we shall do.
         // Memory Leak Info: This will be freed in the thread.
         wa = malloc(sizeof(struct workerArgs));
+        
+        // Assert that malloc worked
+        assert(wa);
+        
+        // Assign the struct components
         wa->socket = threadsocketfd;
         wa->secret_code = secret_code;
         
@@ -167,6 +179,7 @@ void *worker_function(void* args)
     String client_secret_code, secret_code;
     
     
+    
     // Unpack the Worker Arguments
     wa = (struct workerArgs*)args;
     
@@ -184,8 +197,9 @@ void *worker_function(void* args)
     /* This tells the pthreads library that no other thread is going to
     join() this thread. This means that, once this thread terminates,
     its resources can be safely freed (instead of keeping them around
-    so they can be collected by another thread join()-ing this thread) */
-	//pthread_detach(pthread_self());
+    so they can be collected by another thread join()-ing this thread) 
+    Above is written by Borja Sotomayor (link in header comment) */
+	pthread_detach(pthread_self());
        
     // Send introduction message
     memset(server_message, '\0', BUFFERSIZE+1);    
@@ -415,8 +429,10 @@ void *worker_function(void* args)
     client_secret_code = NULL;
     
     free(secret_code);
-    free(wa);
     free(client_secret_code);
+    
+    free(wa);
+    
     
     pthread_exit(NULL);
     

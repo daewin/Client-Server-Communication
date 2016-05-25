@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "linked_list.h"
 
@@ -43,6 +44,9 @@ void list_insert(struct list* this_list, String data)
         fprintf(stderr, "Error: Malloc Failed\n");
         exit(EXIT_FAILURE);
     }
+    
+    // For safety, we assert that data is not NULL
+    assert(data != NULL);
     
     // Create a link with default values
     n->data = data;
