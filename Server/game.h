@@ -14,7 +14,7 @@
 
 static const String colours = "ABCDEF";
 
-// Declarations
+// Prototypes
 String codemaker_generate_code();
 String codebreaker();
 String char_to_string(char character);

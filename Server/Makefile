@@ -40,5 +40,5 @@ clobber: clean
 ##prime.o:	prime.h
 
 linked_list.o: linked_list.h
-game.o: game.h
-server.o: server.h
+game.o: game.h linked_list.h
+server.o: server.h game.h

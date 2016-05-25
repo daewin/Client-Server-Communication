@@ -24,6 +24,8 @@ struct list
     struct node* tail;
 };
 
+
+// Prototypes
 struct list* create_list();
 void list_insert(struct list* this_list, String data);
 void list_remove(struct list* this_list);
