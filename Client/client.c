@@ -72,11 +72,8 @@ main(int argc, char* argv[]){
     
     // If there are no problems, connect to the server 
     if (connect(socketfd, (struct sockaddr *)&server, 
-                                    sizeof(server)) < 0)
-            {
-                perror("Error in connecting to the server");
-                close(socketfd);
-                exit(EXIT_FAILURE);
+                                    sizeof(server)) < 0){
+                socket_error_handler("Error in connecting to the server", socketfd);
             }
             
         
@@ -85,9 +82,7 @@ main(int argc, char* argv[]){
     
     if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
     {
-        perror("Error reading from the socket");
-        close(socketfd);
-        exit(EXIT_FAILURE);
+        socket_error_handler("Error reading from the socket", socketfd);
     }
     printf("%s", client_message);
     
@@ -101,35 +96,15 @@ main(int argc, char* argv[]){
 
     if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
     {
-        perror("Error reading from the socket");
-        close(socketfd);
-        exit(EXIT_FAILURE);
+        socket_error_handler("Error reading from the socket", socketfd);
     }    
     printf("%s", client_message);
     
     // Acknowledge message has been received
     acknowledge_received(socketfd);
     
-
-
-    // Interacts with server. My communication flow between the client and
-    // server is structured such that the messages are synchronized as such:
-    // [Loop]
-    //   1.)  Server -> Client : Too many attempts? (yes/no)
-    //   1a.)    == END ==     : Yes, both break out of loop and 
-    //                           client closes connection. [FAILURE]
-    //   1b.) == DO NOTHING == : No [GO]
-    //   2.)  Client -> Server : Client sends code.
-    // [Inner Loop]
-    //   3.)  Server -> Client : Is code valid? (yes/no)
-    //   3a.) Client -> Server : No, Client sends corrected code
-    //   3b.)                  : Yes, both break out of loop.
-    // [End Inner Loop]
-    //   3.)  Server -> Client : Is the code right? (yes/no)
-    //   3a.)                  : No, next iteration for both loops.
-    //   3b.)                  : Yes, both break out of loop and 
-    //                           client closes connection.
-    // [End Loop]
+    
+    
     while(1)
     {        
         ////////////////////////////////////// Block 1 //////////////////////////////////////
@@ -138,9 +113,7 @@ main(int argc, char* argv[]){
 
         if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
         {
-            perror("Error reading from the socket");
-            close(socketfd);
-            exit(EXIT_FAILURE);
+            socket_error_handler("Error reading from the socket", socketfd);
         }     
         
         // Acknowledge message has been received
@@ -168,9 +141,7 @@ main(int argc, char* argv[]){
             
             if(send(socketfd, client_message, strlen(client_message), 0) < 0)
             {
-                perror("Error writing to the socket");
-                close(socketfd);
-                exit(EXIT_FAILURE);
+                socket_error_handler("Error writing to the socket", socketfd);
             }
             
             // Check if server has acknowledged message
@@ -182,9 +153,7 @@ main(int argc, char* argv[]){
         
             if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
             {
-                perror("Error reading from the socket");
-                close(socketfd);
-                exit(EXIT_FAILURE);
+                socket_error_handler("Error reading from the socket", socketfd);
             }
             
             // Acknowledge message has been received
@@ -202,9 +171,7 @@ main(int argc, char* argv[]){
             
                 if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
                 {
-                    perror("Error reading from the socket");
-                    close(socketfd);
-                    exit(EXIT_FAILURE);
+                    socket_error_handler("Error reading from the socket", socketfd);
                 }
                 
                 // Acknowledge message has been received
@@ -240,9 +207,7 @@ main(int argc, char* argv[]){
     
         if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
         {
-            perror("Error reading from the socket");
-            close(socketfd);
-            exit(EXIT_FAILURE);
+            socket_error_handler("Error reading from the socket", socketfd);
         }
 
         // Acknowledge message has been received
@@ -275,9 +240,7 @@ acknowledge_sent(int socketfd){
     
     if(recv(socketfd, message, BUFFERSIZE+1, 0) < 0)
     {
-        perror("Error reading from the socket");
-        close(socketfd);
-        exit(EXIT_FAILURE);
+        socket_error_handler("Error reading from the socket", socketfd);
     }
     
     if(strstr(message, RECEIVED) != NULL){
@@ -294,10 +257,17 @@ int
 acknowledge_received(int socketfd){
     if(send(socketfd, RECEIVED, strlen(RECEIVED), 0) < 0)
     {
-        perror("Error writing to the socket");
-        close(socketfd);
-        exit(EXIT_FAILURE);
+        socket_error_handler("Error writing to the socket", socketfd);
     }
     
     return 1;      
+}
+
+
+void
+socket_error_handler(String error_message, int socketfd){
+    perror(error_message);
+    fprintf(stderr, "Or, the server has been disconnected.\n");
+    close(socketfd);
+    exit(EXIT_FAILURE);
 }

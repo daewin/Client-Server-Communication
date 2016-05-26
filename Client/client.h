@@ -20,3 +20,4 @@ static const String RECEIVED = "RECEIVED";
 
 int acknowledge_sent(int socketfd);
 int acknowledge_received(int socketfd);
+void socket_error_handler(String error_message, int socketfd);

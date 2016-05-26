@@ -11,9 +11,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
 #include <assert.h>
 #include <pthread.h>
  
@@ -25,6 +22,7 @@ extern time_t rawtime;
 extern struct tm *timeinfo;
 extern pthread_mutex_t lock;
 extern int successful_guesses;
+extern const String RECEIVED;
 
  
 /* Integer to ASCII converter. Obtained and modified from: 
@@ -62,7 +60,7 @@ acknowledge_sent(int threadsocketfd){
     memset(message, '\0', BUFFERSIZE+1);
     
     if(recv(threadsocketfd, message, BUFFERSIZE+1, 0) < 0){
-        socket_error("Error reading from the socket", threadsocketfd);
+        socket_error_handler("Error reading from the socket", threadsocketfd);
     }
     
     if(strstr(message, RECEIVED) != NULL){
@@ -78,7 +76,7 @@ acknowledge_sent(int threadsocketfd){
 int
 acknowledge_received(int threadsocketfd){
     if(send(threadsocketfd, RECEIVED, strlen(RECEIVED), 0) < 0){
-        socket_error("Error writing to the socket", threadsocketfd);        
+        socket_error_handler("Error writing to the socket", threadsocketfd);        
     }
     
     return 1;      
@@ -87,7 +85,7 @@ acknowledge_received(int threadsocketfd){
 
 // Helper function to print error (with errno), close socket and exit thread.
 void
-socket_error(String error_message, int threadsocketfd){
+socket_error_handler(String error_message, int threadsocketfd){
     perror(error_message);
     close(threadsocketfd);
     pthread_exit(NULL);    

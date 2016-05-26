@@ -20,6 +20,11 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <pthread.h>
+#include <signal.h>
+#include <sys/resource.h>
+#include <time.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #include "server.h"
 
@@ -36,6 +41,9 @@ struct tm *timeinfo;
 // Mutex lock
 pthread_mutex_t lock;
 
+// Socket ID to be handled by sighandler
+int socketfd;
+
 // Server 'Performance' and usage statistics
 int successful_connections = 0;
 int successful_guesses = 0;
@@ -51,7 +59,7 @@ main(int argc, char* argv[]){
     
     // Representing our server
     String secret_code;
-    int socketfd, threadsocketfd, server_port;
+    int threadsocketfd, server_port;
     struct sockaddr_in server;
     
     // Representing our thread
@@ -70,6 +78,9 @@ main(int argc, char* argv[]){
         perror("File Error");
         exit(EXIT_FAILURE);
     }        
+    
+    // Assign our sighandler function to handle signal Ctrl+C (SIGINT 2)
+    signal(SIGINT, sighandler);
        
     /* Parse arguments */             
     // Required argument: Port Number.
@@ -199,10 +210,10 @@ main(int argc, char* argv[]){
         // Since only one client can connect to the server in one iteration, 
         // mutex locks are not necessary. 
         successful_connections += 1;
+
     }
     
-    
-    // Use the Ctrl+C to end thing here...
+    // Should not reach here
     close(socketfd);
     
     return 0;    
@@ -260,7 +271,7 @@ void *worker_function(void* args)
     strcpy(server_message, "Introduction...\n");
     
     if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0){
-        socket_error("Error writing to the socket", threadsocketfd);
+        socket_error_handler("Error writing to the socket", threadsocketfd);
     }
     
     // Check if client has acknowledged message
@@ -278,7 +289,7 @@ void *worker_function(void* args)
     strcat(server_message, " attempts at getting it right!\n");
     
     if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0){
-        socket_error("Error writing to the socket", threadsocketfd);
+        socket_error_handler("Error writing to the socket", threadsocketfd);
     }
     
     // Check if client has acknowledged message
@@ -311,7 +322,7 @@ void *worker_function(void* args)
 
             if(send(threadsocketfd, server_message, 
                             strlen(server_message), 0) < 0){
-                socket_error("Error writing to the socket", threadsocketfd);
+                socket_error_handler("Error writing to the socket", threadsocketfd);
             }
             
             // Check if client has acknowledged message
@@ -339,7 +350,7 @@ void *worker_function(void* args)
 
             if(send(threadsocketfd, server_message, 
                             strlen(server_message), 0) < 0){
-                socket_error("Error writing to the socket", threadsocketfd);
+                socket_error_handler("Error writing to the socket", threadsocketfd);
             }
             
             // Check if client has acknowledged message
@@ -355,7 +366,7 @@ void *worker_function(void* args)
             // Read guess from client
             memset(server_message, '\0', BUFFERSIZE+1);        
             if(recv(threadsocketfd, server_message, BUFFERSIZE+1, 0) < 0){
-                socket_error("Error reading from the socket", threadsocketfd);
+                socket_error_handler("Error reading from the socket", threadsocketfd);
             }
             
             // Acknowledge message has been received
@@ -384,7 +395,7 @@ void *worker_function(void* args)
                 
                 if(send(threadsocketfd, server_message, 
                                 strlen(server_message), 0) < 0){
-                    socket_error("Error writing to the socket", threadsocketfd);                    
+                    socket_error_handler("Error writing to the socket", threadsocketfd);                    
                 }
                 
                 // Check if client has acknowledged message 
@@ -412,7 +423,7 @@ void *worker_function(void* args)
                 
                 if(send(threadsocketfd, server_message, 
                                 strlen(server_message), 0) < 0){
-                    socket_error("Error writing to the socket", threadsocketfd);
+                    socket_error_handler("Error writing to the socket", threadsocketfd);
                 }
                 
                 // Check if client has acknowledged message 
@@ -431,7 +442,7 @@ void *worker_function(void* args)
                 
                 if(send(threadsocketfd, server_message, 
                                 strlen(server_message), 0) < 0){
-                    socket_error("Error writing to the socket", threadsocketfd);
+                    socket_error_handler("Error writing to the socket", threadsocketfd);
                 }
                         
                 // Check if client has acknowledged message
@@ -470,7 +481,7 @@ void *worker_function(void* args)
             
             if(send(threadsocketfd, server_message, 
                             strlen(server_message), 0) < 0){
-                socket_error("Error writing to the socket", threadsocketfd);                    
+                socket_error_handler("Error writing to the socket", threadsocketfd);                    
             }
             
             // Check if client has acknowledged attempt message
@@ -504,7 +515,7 @@ void *worker_function(void* args)
             strcpy(server_message, "SUCCESS: You guessed it right! Game Over\n");
             
             if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0){
-                socket_error("Error writing to the socket", threadsocketfd);
+                socket_error_handler("Error writing to the socket", threadsocketfd);
             }
 
             // Check if client has acknowledged message
@@ -534,7 +545,7 @@ void *worker_function(void* args)
             strcat(server_message, "\n");
             
             if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0){
-                socket_error("Error writing to the socket", threadsocketfd);
+                socket_error_handler("Error writing to the socket", threadsocketfd);
             }
             
             // Check if client has acknowledged message
@@ -551,6 +562,9 @@ void *worker_function(void* args)
             add_log_entry(MOCKSERVERIP, NULL, log_response_feedback);
             free(log_response_feedback);   
             
+            // Free feedback
+            free(feedback);
+            
         }
         /////////////////////////////////////////////////////////////////////////////////////        
         
@@ -560,17 +574,52 @@ void *worker_function(void* args)
     printf("Socket %d disconnected\n", threadsocketfd);
     close(threadsocketfd);
     
-    // Free secret and input codes
+    // Free secret and input codes, client ip string and the structure
     secret_code = NULL;
     client_secret_code = NULL;
+    client_ip = NULL;
+    wa = NULL;
     
     free(secret_code);
     free(client_secret_code);
-    free(client_ip);
-    
+    free(client_ip);    
     free(wa);
     
     
     pthread_exit(NULL);
     
+}
+
+
+
+// Interrupt Signal Handler
+// All server threads and clients have a socket error handler which 
+// exits gracefully (sortof) with a message.  
+void
+sighandler(int signum){
+    
+    // First we flush our output buffer (if there's anything in there),
+    // then write the performance and resource usage statistics.
+    fflush(fp);
+       
+    struct rusage ru;
+    struct timeval utime;
+    struct timeval stime;
+    
+    getrusage(RUSAGE_SELF, &ru);
+    
+    utime = ru.ru_utime;
+    stime = ru.ru_stime;
+    
+    printf("\n============= Performance and Usage Statistics =============\n");
+    printf("User CPU time used: %" PRId64 ".%" PRId64 "\nSystem CPU time used: %" PRId64 ".%" PRId64 "\n", 
+        (int64_t)utime.tv_sec, (int64_t)utime.tv_usec, (int64_t)stime.tv_sec, (int64_t)stime.tv_usec);
+    
+    
+    
+
+    
+    close(socketfd);
+    
+    exit(EXIT_SUCCESS);
 }

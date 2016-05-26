@@ -13,6 +13,7 @@
 
 // Prototypes
 void *worker_function(void* args);
+void sighandler(int signum);
 
 
 struct workerArgs{
@@ -21,6 +22,6 @@ struct workerArgs{
     String client_ip;
 };
 
-
+const String RECEIVED = "RECEIVED";
 const String LOGFILE = "log.txt";
 const String MOCKSERVERIP = "0.0.0.0";

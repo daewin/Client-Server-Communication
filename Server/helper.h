@@ -14,9 +14,8 @@
 String itoa(int num);
 int acknowledge_sent(int threadsocketfd);
 int acknowledge_received(int threadsocketfd);
-void socket_error(String error_message, int threadsocketfd);
+void socket_error_handler(String error_message, int threadsocketfd);
 void client_guess_successful();
 void add_log_entry(String ip_address, int* socket_number, String message);
 
 
-const String RECEIVED = "RECEIVED";
