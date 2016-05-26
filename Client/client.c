@@ -22,8 +22,7 @@ main(int argc, char* argv[]){
         
     // Representing our client
     char client_message[BUFFERSIZE+1];
-    int socketfd;     
-    char attempt_message[ATTEMPTSIZE+1];
+    int socketfd;
     
     // Representing our server
     String input_hostname;
@@ -155,10 +154,6 @@ main(int argc, char* argv[]){
         } else {
             // Print "FAILURE" receipt not found, print attempt message.
             printf(client_message);
-            
-            // Store attempt
-            memset(attempt_message, '\0', ATTEMPTSIZE+1);
-            strcpy(attempt_message, client_message);
         }
         /////////////////////////////////////////////////////////////////////////////////////
         
@@ -196,15 +191,48 @@ main(int argc, char* argv[]){
             acknowledge_received(socketfd);     
             
             if(strstr(client_message, INVALID) != NULL){
-                // If "INVALID" receipt found, print message and retry
+                // If "INVALID" receipt found, we also check the following
+                // message for a "FAILURE" receipt indicating that the attempts
+                // have exceeded MAXATTEMPTS. We break twice if so. Else, just
+                // print.
                 printf(client_message);
-                printf(attempt_message);
+
+                // Print new attempt/failure message
+                memset(client_message, '\0', BUFFERSIZE+1);
+            
+                if(recv(socketfd, client_message, BUFFERSIZE+1, 0) < 0)
+                {
+                    perror("Error reading from the socket");
+                    close(socketfd);
+                    exit(EXIT_FAILURE);
+                }
+                
+                // Acknowledge message has been received
+                acknowledge_received(socketfd);   
+                
+                // Check if the "FAILURE" receipt is present
+                if(strstr(client_message, FAILURE) != NULL){
+                    // We have, so we print and break here once
+                    printf(client_message);
+                    break;
+                } 
+
+                // Not a failure, so we just print the attempt message
+                printf(client_message);
+                
+                
             } else {
                 // No "INVALID" receipt found, so code was valid. Break.
                 break;
             }            
         }
         /////////////////////////////////////////////////////////////////////////////////////
+        
+        // Check if the "FAILURE" receipt is present
+        if(strstr(client_message, FAILURE) != NULL){
+            // We have, so we break here again to end client
+            break;
+        }       
         
         ////////////////////////////////////// Block 3 //////////////////////////////////////
         // Read result of our code.

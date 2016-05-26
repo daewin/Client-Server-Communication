@@ -16,8 +16,8 @@ CFLAGS 	= -Wall
 ## SRC = Source files.
 ## EXE = Executable name.
 
-SRC =		server.c game.c linked_list.c
-OBJ =		server.o game.o linked_list.o
+SRC =		linked_list.c game.c helper.c server.c
+OBJ =		linked_list.o game.o helper.o server.o
 EXE = 		server
 
 ## Top level target is executable.
@@ -41,4 +41,5 @@ clobber: clean
 
 linked_list.o: linked_list.h
 game.o: game.h linked_list.h
-server.o: server.h game.h
+helper.o: helper.h game.h
+server.o: server.h helper.h
