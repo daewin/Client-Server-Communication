@@ -2,7 +2,7 @@
  * Server-Side Helper Functions for Project 2
  * Subject: COMP30023 Computer Systems
  * Author: Daewin SV Lingam
- * Student ID: 679182
+ * Student ID: 679182 (dsv)
  * Date Modified: 26/5/2016
  ********************************************************/ 
 #include <stdio.h>
@@ -13,16 +13,23 @@
 #include <sys/socket.h>
 #include <assert.h>
 #include <pthread.h>
+#include <sys/resource.h>
+#include <time.h>
+#include <stdint.h>
+#include <inttypes.h>
  
 #include "helper.h"
 
-// Extern values from server for our helper to use
+// Extern values from Server for our helper to use
 extern FILE *fp;
 extern time_t rawtime;
 extern struct tm *timeinfo;
 extern pthread_mutex_t lock;
 extern int successful_guesses;
 extern const String RECEIVED;
+extern int successful_connections;
+extern int successful_guesses;
+
 
  
 /* Integer to ASCII converter. Obtained and modified from: 
@@ -147,5 +154,51 @@ add_log_entry(String ip_address, int* socket_number, String message){
     
     // Unlock the mutex
     pthread_mutex_unlock(&lock);
+}
+
+
+// Helper function to print various resource usage statistics 
+void
+print_usage(){
+    
+    struct rusage ru;
+    struct timeval utime;
+    struct timeval stime;
+    
+    getrusage(RUSAGE_SELF, &ru);
+    
+    utime = ru.ru_utime;
+    stime = ru.ru_stime;
+    
+    fprintf(fp, 
+        "\n============= Performance and Usage Statistics =============\n\n");
+    
+    fprintf(fp, 
+        "Number of successful connections: %d\n", successful_connections);
+    fprintf(fp, "Number of successful guesses: %d\n", successful_guesses);
+    
+    fprintf(fp, "User CPU time used: %" PRId64 ".%" PRId64 " seconds\n",  
+        (int64_t)utime.tv_sec, (int64_t)utime.tv_usec);
+        
+    fprintf(fp, "System CPU time used: %" PRId64 ".%" PRId64 " seconds\n", 
+        (int64_t)stime.tv_sec, (int64_t)stime.tv_usec);
+    
+    
+    fprintf(fp, "Maximum resident set size used: %ld kB\n", ru.ru_maxrss);
+    fprintf(fp, "Page reclaims (soft page faults): %ld\n", ru.ru_minflt);
+    fprintf(fp, "Page faults (hard page faults): %ld\n", ru.ru_majflt);
+    fprintf(fp, 
+        "Number of block output operations to log: %ld\n", ru.ru_oublock);
+    fprintf(fp, 
+        "Voluntary context switches between threads: %ld\n", ru.ru_nvcsw);
+    fprintf(fp, 
+        "Involuntary context switches between threads: %ld\n", ru.ru_nivcsw);
+    
+    fprintf(fp, 
+        "\n============================================================\n");
+    
+    // Flush the statistics from the buffer to the file
+    fflush(fp); 
+    
 }
 

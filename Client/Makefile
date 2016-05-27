@@ -1,15 +1,17 @@
-# 
-# Sample Makefile for project 1 (COMP30017)
 #
-# The program used for illustration purposes is
-# a simple program using prime numbers
+# Client Makefile for Project 2
+# Subject: COMP30023 Computer Systems
+# Author: Daewin SV Lingam
+# Student ID: 679182 (dsv)
+# Date Modified: 26/5/2016
 #
+
 
 
 ## CC  = Compiler.
 ## CFLAGS = Compiler flags.
 CC	= gcc
-CFLAGS 	= -Wall  
+CFLAGS 	= -Wall -std=c99 -pedantic
 
 
 ## OBJ = Object files.

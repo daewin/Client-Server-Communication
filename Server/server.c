@@ -2,7 +2,7 @@
  * Server-Side using TCP for Project 2
  * Subject: COMP30023 Computer Systems
  * Author: Daewin SV Lingam
- * Student ID: 679182
+ * Student ID: 679182 (dsv)
  * Date Modified: 25/5/2016
  *
  * The following helped immensely in my Server-(Multi)Client implementation:
@@ -21,10 +21,6 @@
 #include <assert.h>
 #include <pthread.h>
 #include <signal.h>
-#include <sys/resource.h>
-#include <time.h>
-#include <stdint.h>
-#include <inttypes.h>
 
 #include "server.h"
 
@@ -49,10 +45,9 @@ int successful_connections = 0;
 int successful_guesses = 0;
 
 
-
 int
 main(int argc, char* argv[]){
-    
+   
     // Representing our client
     struct sockaddr_in client;
     socklen_t clientaddrlen = sizeof(struct sockaddr_in);
@@ -81,6 +76,9 @@ main(int argc, char* argv[]){
     
     // Assign our sighandler function to handle signal Ctrl+C (SIGINT 2)
     signal(SIGINT, sighandler);
+       
+    // Handle SIGPIPE signal by ignoring it.
+    signal(SIGPIPE, SIG_IGN);
        
     /* Parse arguments */             
     // Required argument: Port Number.
@@ -151,10 +149,9 @@ main(int argc, char* argv[]){
         perror("Error in listening for clients");
         free(secret_code);
         exit(EXIT_FAILURE);
-    } else {
-        printf("Listening on port %d...\n", ntohs(server.sin_port));
     }
     
+    printf("\nServer is running. Press Ctrl+C to exit!\n");
     
     // The server continually accepts new connections and passes the work
     // off to the worker thread.
@@ -200,14 +197,16 @@ main(int argc, char* argv[]){
         // Log the client connection.        
         // Message will be freed after being written to the log file.
         String log_client_connection = 
-            malloc(((LOGMESSAGESIZE + 1) * sizeof(char)) + sizeof(threadsocketfd));
+            malloc(((LOGMESSAGESIZE + 1) * sizeof(char)) 
+                                    + sizeof(threadsocketfd));
           
-        sprintf(log_client_connection, "(%d) client connected", threadsocketfd);        
+        sprintf(log_client_connection, 
+                    "(%d) client connected", threadsocketfd); 
         add_log_entry(client_ip, NULL, log_client_connection);
         
         free(log_client_connection);
         
-        // Since only one client can connect to the server in one iteration, 
+        // Since only one client can connect to the server in one iteration,
         // mutex locks are not necessary. 
         successful_connections += 1;
 
@@ -268,7 +267,7 @@ void *worker_function(void* args)
        
     // Send introduction message
     memset(server_message, '\0', BUFFERSIZE+1);    
-    strcpy(server_message, "Introduction...\n");
+    strcpy(server_message, INTRODUCTION);
     
     if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0){
         socket_error_handler("Error writing to the socket", threadsocketfd);
@@ -308,7 +307,7 @@ void *worker_function(void* args)
     // server is structured such that the messages are synchronized.    
     while(1)
     {
-        ////////////////////////////////////// Block 1 //////////////////////////////////////
+        /////////////////////////////// Block 1 ///////////////////////////////
         // Check and send message if too many attempts have been made.
         if(attempt >= MAXGUESSES){
             // Yes, both break out of loop and client closes connection.
@@ -350,15 +349,16 @@ void *worker_function(void* args)
 
             if(send(threadsocketfd, server_message, 
                             strlen(server_message), 0) < 0){
-                socket_error_handler("Error writing to the socket", threadsocketfd);
+                socket_error_handler("Error writing to the socket", 
+                                                        threadsocketfd);
             }
             
             // Check if client has acknowledged message
             while(!acknowledge_sent(threadsocketfd));       
         }
-        /////////////////////////////////////////////////////////////////////////////////////        
+        ///////////////////////////////////////////////////////////////////////        
            
-        ////////////////////////////////////// Block 2 //////////////////////////////////////   
+        /////////////////////////////// Block 2 ///////////////////////////////   
         // Client sends code 
         // We keep looping through until the code client entered is valid.
         while(1)
@@ -372,7 +372,7 @@ void *worker_function(void* args)
             // Acknowledge message has been received
             acknowledge_received(threadsocketfd);  
             
-            ///////////////////////////////////// Block 2a //////////////////////////////////////                      
+            //////////////////////////// Block 2a /////////////////////////////            
             // Check if the code is valid.
             int validity = is_code_invalid(server_message, 0);
             if(validity == 1){       
@@ -380,9 +380,11 @@ void *worker_function(void* args)
                 // Log the client's invalid guess        
                 // Message will be freed after being written to the log file.
                 String log_guess_invalid = 
-                    malloc((LOGMESSAGESIZE + 1 + strlen(server_message) + 1) * sizeof(char));
+                    malloc((LOGMESSAGESIZE + 1 + strlen(server_message) + 1) 
+                                                               * sizeof(char));
                     
-                sprintf(log_guess_invalid, " client's guess = %s", server_message);
+                sprintf(log_guess_invalid, 
+                        " client's guess = %s", server_message);
                 
                 add_log_entry(client_ip, &threadsocketfd, log_guess_invalid);
                 free(log_guess_invalid);
@@ -395,7 +397,8 @@ void *worker_function(void* args)
                 
                 if(send(threadsocketfd, server_message, 
                                 strlen(server_message), 0) < 0){
-                    socket_error_handler("Error writing to the socket", threadsocketfd);                    
+                    socket_error_handler("Error writing to the socket", 
+                                                            threadsocketfd);      
                 }
                 
                 // Check if client has acknowledged message 
@@ -407,9 +410,11 @@ void *worker_function(void* args)
                 // Log the client's invalid guess        
                 // Message will be freed after being written to the log file.
                 String log_guess_invalid = 
-                    malloc((LOGMESSAGESIZE + 1 + strlen(server_message) + 1) * sizeof(char));
+                    malloc((LOGMESSAGESIZE + 1 + strlen(server_message) + 1) 
+                                                               * sizeof(char));
                     
-                sprintf(log_guess_invalid, " client's guess = %s", server_message);
+                sprintf(log_guess_invalid, 
+                                " client's guess = %s", server_message);
                 
                 add_log_entry(client_ip, &threadsocketfd, log_guess_invalid);
                 free(log_guess_invalid);
@@ -423,7 +428,8 @@ void *worker_function(void* args)
                 
                 if(send(threadsocketfd, server_message, 
                                 strlen(server_message), 0) < 0){
-                    socket_error_handler("Error writing to the socket", threadsocketfd);
+                    socket_error_handler("Error writing to the socket", 
+                                                               threadsocketfd);
                 }
                 
                 // Check if client has acknowledged message 
@@ -442,32 +448,32 @@ void *worker_function(void* args)
                 
                 if(send(threadsocketfd, server_message, 
                                 strlen(server_message), 0) < 0){
-                    socket_error_handler("Error writing to the socket", threadsocketfd);
+                    socket_error_handler("Error writing to the socket", 
+                                                               threadsocketfd);
                 }
                         
                 // Check if client has acknowledged message
                 while(!acknowledge_sent(threadsocketfd));
-                
-                // Increase successful guess count
-                client_guess_successful();
                 
                 // Code is valid so we break out of loop.
                 break;   
             }
             
             /////////////// INVALID HERE ////////////////
-            // Log the servers response. Only "INVALID" responses reaches here.        
+            // Log the servers response. Only "INVALID" responses reaches here.     
             // Message will be freed after being written to the log file.
             String log_response_invalid = 
                 malloc((LOGMESSAGESIZE + 1) * sizeof(char));
             
             // Log server's response to the client
-            sprintf(log_response_invalid, " server's response = INVALID input is invalid");
+            sprintf(log_response_invalid, 
+                            " server's response = INVALID input is invalid");
             
             add_log_entry(MOCKSERVERIP, NULL, log_response_invalid);
             free(log_response_invalid);
             
-            // As each INVALID input is counted as a "guess", we increment attempt.
+            // As each INVALID input is counted as a "guess", 
+            // we increment attempt.
             attempt++;
             
             // Check that attempt is not >= MAXGUESSES
@@ -481,7 +487,8 @@ void *worker_function(void* args)
             
             if(send(threadsocketfd, server_message, 
                             strlen(server_message), 0) < 0){
-                socket_error_handler("Error writing to the socket", threadsocketfd);                    
+                socket_error_handler("Error writing to the socket", 
+                                                            threadsocketfd);
             }
             
             // Check if client has acknowledged attempt message
@@ -495,7 +502,7 @@ void *worker_function(void* args)
             continue;
         }
     
-        /////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
         
         // Log the client's valid guess        
         // Message will be freed after being written to the log file.
@@ -507,21 +514,43 @@ void *worker_function(void* args)
         add_log_entry(client_ip, &threadsocketfd, log_response_valid);
         free(log_response_valid);
         
-        ////////////////////////////////////// Block 3 //////////////////////////////////////
+        /////////////////////////////// Block 3 ///////////////////////////////
         // Send result of the clients code.
+        String feedback = 
+            codemaker_provide_feedback(secret_code, client_secret_code);
+            
         if(strcmp(client_secret_code, secret_code) == 0)
         {
-            memset(server_message, '\0', BUFFERSIZE+1);    
-            strcpy(server_message, "SUCCESS: You guessed it right! Game Over\n");
+            // Increase successful guess count
+            client_guess_successful();
             
-            if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0){
-                socket_error_handler("Error writing to the socket", threadsocketfd);
+            memset(server_message, '\0', BUFFERSIZE+1);    
+            strcpy(server_message, 
+                        "SUCCESS: You guessed it right! Game Over\n");
+            
+            if(send(threadsocketfd, server_message, 
+                                strlen(server_message), 0) < 0)
+            {
+                socket_error_handler("Error writing to the socket", 
+                                                            threadsocketfd);
             }
 
             // Check if client has acknowledged message
-            while(!acknowledge_sent(threadsocketfd));            
-            
+            while(!acknowledge_sent(threadsocketfd));         
+
             // Log the servers response.        
+            // Message will be freed after being written to the log file.
+            String log_response_feedback = 
+                malloc((LOGMESSAGESIZE + 1 + strlen(feedback) + 1) 
+                                                            * sizeof(char));
+            
+            // Just log our response to the client
+            sprintf(log_response_feedback, " server's hint = %s", feedback);
+            
+            add_log_entry(MOCKSERVERIP, NULL, log_response_feedback);
+            free(log_response_feedback);      
+            
+            // Log the successful guess.        
             // Message will be freed after being written to the log file.
             String log_response_success = 
                 malloc((LOGMESSAGESIZE + 1) * sizeof(char));
@@ -535,17 +564,16 @@ void *worker_function(void* args)
             break;
             
         } else {            
-            memset(server_message, '\0', BUFFERSIZE+1);    
-            
-            String feedback = 
-                codemaker_provide_feedback(secret_code, client_secret_code);
+            memset(server_message, '\0', BUFFERSIZE+1);                
             
             strcpy(server_message, "Result: ");
             strcat(server_message, feedback);
             strcat(server_message, "\n");
             
-            if(send(threadsocketfd, server_message, strlen(server_message), 0) < 0){
-                socket_error_handler("Error writing to the socket", threadsocketfd);
+            if(send(threadsocketfd, server_message, 
+                                         strlen(server_message), 0) < 0){
+                socket_error_handler("Error writing to the socket", 
+                                                        threadsocketfd);
             }
             
             // Check if client has acknowledged message
@@ -554,24 +582,22 @@ void *worker_function(void* args)
             // Log the servers response.        
             // Message will be freed after being written to the log file.
             String log_response_feedback = 
-                malloc((LOGMESSAGESIZE + 1 + strlen(feedback) + 1) * sizeof(char));
+                malloc((LOGMESSAGESIZE + 1 + strlen(feedback) + 1) 
+                                                          * sizeof(char));
             
             // Just log our response to the client
             sprintf(log_response_feedback, " server's hint = %s", feedback);
             
             add_log_entry(MOCKSERVERIP, NULL, log_response_feedback);
             free(log_response_feedback);   
-            
-            // Free feedback
-            free(feedback);
-            
-        }
-        /////////////////////////////////////////////////////////////////////////////////////        
+        }    
+        // Free feedback
+        free(feedback);
+        ///////////////////////////////////////////////////////////////////////      
         
         attempt++;
     }
     
-    printf("Socket %d disconnected\n", threadsocketfd);
     close(threadsocketfd);
     
     // Free secret and input codes, client ip string and the structure
@@ -591,7 +617,6 @@ void *worker_function(void* args)
 }
 
 
-
 // Interrupt Signal Handler
 // All server threads and clients have a socket error handler which 
 // exits gracefully (sortof) with a message.  
@@ -601,25 +626,28 @@ sighandler(int signum){
     // First we flush our output buffer (if there's anything in there),
     // then write the performance and resource usage statistics.
     fflush(fp);
+    
+    printf("\nPrinting log...");
+    
+    // Lock the mutex (or block until flush is complete)
+    pthread_mutex_lock(&lock);  
        
-    struct rusage ru;
-    struct timeval utime;
-    struct timeval stime;
-    
-    getrusage(RUSAGE_SELF, &ru);
-    
-    utime = ru.ru_utime;
-    stime = ru.ru_stime;
-    
-    printf("\n============= Performance and Usage Statistics =============\n");
-    printf("User CPU time used: %" PRId64 ".%" PRId64 "\nSystem CPU time used: %" PRId64 ".%" PRId64 "\n", 
-        (int64_t)utime.tv_sec, (int64_t)utime.tv_usec, (int64_t)stime.tv_sec, (int64_t)stime.tv_usec);
-    
-    
-    
+    print_usage();
 
+    // Unlock the mutex
+    pthread_mutex_unlock(&lock);
     
+    printf("Done. Exiting!\n");
+    
+    // Destroy the mutex
+    pthread_mutex_destroy(&lock);
+    
+    // Close the socket
     close(socketfd);
+    
+    // Close the file
+    fclose(fp);
     
     exit(EXIT_SUCCESS);
 }
+

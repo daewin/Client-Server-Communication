@@ -125,12 +125,12 @@ main(int argc, char* argv[]){
         
         if(strstr(client_message, FAILURE) != NULL){
             // If "FAILURE" receipt found, print message, and end connection.
-            printf(client_message);            
+            printf("%s", client_message);            
             break;
             
         } else {
             // Print "FAILURE" receipt not found, print attempt message.
-            printf(client_message);
+            printf("%s", client_message);
         }
         /////////////////////////////////////////////////////////////////////////////////////
         
@@ -168,7 +168,7 @@ main(int argc, char* argv[]){
                 // message for a "FAILURE" receipt indicating that the attempts
                 // have exceeded MAXATTEMPTS. We break twice if so. Else, just
                 // print.
-                printf(client_message);
+                printf("%s", client_message);
 
                 // Print new attempt/failure message
                 memset(client_message, '\0', BUFFERSIZE+1);
@@ -184,12 +184,12 @@ main(int argc, char* argv[]){
                 // Check if the "FAILURE" receipt is present
                 if(strstr(client_message, FAILURE) != NULL){
                     // We have, so we print and break here once
-                    printf(client_message);
+                    printf("%s", client_message);
                     break;
                 } 
 
                 // Not a failure, so we just print the attempt message
-                printf(client_message);
+                printf("%s", client_message);
                 
                 
             } else {
@@ -220,13 +220,13 @@ main(int argc, char* argv[]){
             
         if(strstr(client_message, SUCCESS) != NULL){
             // If "SUCCESS" receipt found, print message and break
-            printf(client_message);
+            printf("%s", client_message);
             
             break;
             
         } else {
             // No "SUCCESS" receipt found, so we print feedback
-            printf(client_message);
+            printf("%s", client_message);
         }  
     }
     // Close the socket after we're done

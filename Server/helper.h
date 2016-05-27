@@ -2,7 +2,7 @@
  * Server-Side Helper Functions for Project 2
  * Subject: COMP30023 Computer Systems
  * Author: Daewin SV Lingam
- * Student ID: 679182
+ * Student ID: 679182 (dsv)
  * Date Modified: 26/5/2016
  ********************************************************/
  
@@ -17,5 +17,6 @@ int acknowledge_received(int threadsocketfd);
 void socket_error_handler(String error_message, int threadsocketfd);
 void client_guess_successful();
 void add_log_entry(String ip_address, int* socket_number, String message);
+void print_usage();
 
 

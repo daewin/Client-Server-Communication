@@ -2,7 +2,7 @@
  * Game for Project 2
  * Subject: COMP30023 Computer Systems
  * Author: Daewin SV Lingam
- * Student ID: 679182
+ * Student ID: 679182 (dsv)
  * Date Modified: 21/5/2016
  ********************************************************/
 
@@ -126,8 +126,8 @@ codemaker_provide_feedback(String secret_code, String input_code){
                     // Now we check if there's a matching colour
                     if(strcmp(secret_node->data, input_node->data) == 0){
                         
-                        // Just set the inputs' "guessed" to 1, since we'll be
-                        // only doing one pass over secret_node_list.
+                        // Just set the inputs' "guessed" to 1, since we'll 
+                        // be only doing one pass over secret_node_list.
                         input_node->guessed = 1;
                         m++;
                         
